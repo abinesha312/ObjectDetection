@@ -1,50 +1,57 @@
-import math
+import cv2
+import numpy as np
+
+
 
 
 class Tracker:
-    def __init__(self):
-        # Store the center positions of the objects
-        self.center_points = {}
-        # Keep the count of the IDs
-        # each time a new object id detected, the count will increase by one
-        self.id_count = 0
+    def __init__(self, max_distance=50):
+        self.tracked_objects = {}  # Dictionary to store tracked objects with IDs
+        self.max_distance = max_distance  # Maximum distance for matching objects
+        self.next_object_id = 1  # Counter for assigning unique IDs to objects
 
+    def update(self, new_rectangles):
+        # Initialize a dictionary to store updated objects
+        updated_objects = {}
 
-    def update(self, objects_rect):
-        # Objects boxes and ids
-        objects_bbs_ids = []
+        # Iterate over the new detected rectangles
+        for new_rect in new_rectangles:
+            matched = False
 
-        # Get center point of new object
-        for rect in objects_rect:
-            x, y, w, h = rect
-            cx = (x + x + w) // 2
-            cy = (y + y + h) // 2
+            # Iterate over the existing tracked objects
+            for obj_id, obj_rect in self.tracked_objects.items():
+                # Calculate the center of the new rectangle
+                new_center = (
+                    (new_rect[0] + new_rect[2]) / 2,
+                    (new_rect[1] + new_rect[3]) / 2,
+                )
 
-            # Find out if that object was detected already
-            same_object_detected = False
-            for id, pt in self.center_points.items():
-                dist = math.hypot(cx - pt[0], cy - pt[1])
+                # Calculate the center of the existing tracked object's rectangle
+                obj_center = (
+                    (obj_rect[0] + obj_rect[2]) / 2,
+                    (obj_rect[1] + obj_rect[3]) / 2,
+                )
 
-                if dist < 35:
-                    self.center_points[id] = (cx, cy)
-#                    print(self.center_points)
-                    objects_bbs_ids.append([x, y, w, h, id])
-                    same_object_detected = True
+                # Calculate the Euclidean distance between the centers
+                distance = ((new_center[0] - obj_center[0]) ** 2 +
+                            (new_center[1] - obj_center[1]) ** 2) ** 0.5
+
+                # If the distance is within the threshold, update the tracked object
+                if distance <= self.max_distance:
+                    updated_objects[obj_id] = new_rect
+                    matched = True
                     break
 
-            # New object is detected we assign the ID to that object
-            if same_object_detected is False:
-                self.center_points[self.id_count] = (cx, cy)
-                objects_bbs_ids.append([x, y, w, h, self.id_count])
-                self.id_count += 1
+            # If no match is found, create a new tracked object
+            if not matched:
+                updated_objects[self.next_object_id] = new_rect
+                self.next_object_id += 1  # Increment the object ID
 
-        # Clean the dictionary by center points to remove IDS not used anymore
-        new_center_points = {}
-        for obj_bb_id in objects_bbs_ids:
-            _, _, _, _, object_id = obj_bb_id
-            center = self.center_points[object_id]
-            new_center_points[object_id] = center
+        # Update the tracked_objects dictionary with the updated objects
+        self.tracked_objects = updated_objects
 
-        # Update dictionary with IDs not used removed
-        self.center_points = new_center_points.copy()
-        return objects_bbs_ids
+        # Return the updated objects with IDs
+        return self.tracked_objects
+
+
+
