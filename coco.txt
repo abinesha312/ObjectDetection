@@ -1,4 +1,5 @@
 person
+door
 bicycle
 car
 motorcycle
