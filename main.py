@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 
 AddCount_url = "https://gc86e6ffd3f8773-db87cxy.adb.us-ashburn-1.oraclecloudapps.com/ords/kred/KredVision/AddCount/"
-current_time = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+current_time =datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
 model=YOLO('yolov8s.pt')
 
@@ -23,9 +23,9 @@ def RGB(event, x, y, flags, param):
 cv2.namedWindow('RGB')
 cv2.setMouseCallback('RGB', RGB)
 # cap=cv2.VideoCapture(0)
-# cap=cv2.VideoCapture('busfinal.mp4')
-cap = cv2.VideoCapture('rtsp://admin:Admin@123@68.185.201.179:554/1')
-# cap = cv2.VideoCapture('rtsp://admin:Admin@123@192.168.1.137:554/1')
+# cap=cv2.VideoCapture('kredpeoplecount.mp4')
+# cap = cv2.VideoCapture('https://ipcamlive.com/65edec084e907')
+cap = cv2.VideoCapture('rtsp://admin:Admin@123@192.168.1.137:554/1')
 
 
 my_file = open("coco.txt", "r")
@@ -34,10 +34,11 @@ class_list = data.split("\n")
 #print(class_list)
 
 count=0
-area1=[(259,488),(281,499),(371,499),(303,466)]
+area1=[(449,441),(402,447),(672,419),(709,435)]
 tracker=Tracker()
 going_in={}
 counter=[]
+pcnt=0
 while True:    
     ret,frame = cap.read()
     if not ret:
@@ -75,8 +76,11 @@ while True:
 
     cv2.polylines(frame,[np.array(area1,np.int32)],True,(255,0,0),2)
     p=len(counter)
-    payload = {"gender": "Male","count": p,"entrytime": current_time,"created_date": current_time,"created_by": "User2"}
-    response = requests.post(AddCount_url, json=payload)
+
+    if(p > pcnt):
+        payload = {"gender": "Male","count": p,"entrytime": current_time,"created_date": current_time,"created_by": "User2"}
+        response = requests.post(AddCount_url, json=payload)
+        pcnt=p
     cvzone.putTextRect(frame,f'Counter:-{p}',(50,60),2,2)
     cv2.imshow("RGB", frame)
     if cv2.waitKey(1)&0xFF==27:
